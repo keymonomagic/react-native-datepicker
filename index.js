@@ -14,7 +14,7 @@ import {
   Keyboard
 } from 'react-native';
 import Style from './style';
-import Moment from 'moment';
+import { format as formatDate, parse as parseDate } from 'date-fns';
 
 const FORMATS = {
   'date': 'YYYY-MM-DD',
@@ -37,6 +37,7 @@ class DatePicker extends Component {
 
     this.getDate = this.getDate.bind(this);
     this.getDateStr = this.getDateStr.bind(this);
+    this.getTitleStr = this.getTitleStr.bind(this);
     this.datePicked = this.datePicked.bind(this);
     this.onPressDate = this.onPressDate.bind(this);
     this.onPressCancel = this.onPressCancel.bind(this);
@@ -148,21 +149,12 @@ class DatePicker extends Component {
       return now;
     }
 
-    if (date instanceof Date) {
-      return date;
-    }
-
-    return Moment(date, format).toDate();
+    return parseDate(date);
   }
 
   getDateStr(date = this.props.date) {
     const {mode, format = FORMATS[mode]} = this.props;
-
-    if (date instanceof Date) {
-      return Moment(date).format(format);
-    } else {
-      return Moment(this.getDate(date)).format(format);
-    }
+    return formatDate(date, format);
   }
 
   datePicked() {
@@ -177,7 +169,14 @@ class DatePicker extends Component {
     if (!date && placeholder) {
       return (<Text style={[Style.placeholderText, customStyles.placeholderText]}>{placeholder}</Text>);
     }
-    return (<Text style={[Style.dateText, customStyles.dateText]}>{this.getDateStr()}</Text>);
+    return (<Text style={[Style.dateText, customStyles.dateText]}>{this.getTitleStr()}</Text>);
+  }
+
+  getTitleStr() {
+    if (typeof this.props.getTitleStr === 'function') {
+      return this.props.getTitleStr(this.state.date)
+    }
+    return this.getDateStr()
   }
 
   onDateChange(date) {
@@ -206,8 +205,11 @@ class DatePicker extends Component {
 
   onTimePicked({action, hour, minute}) {
     if (action !== DatePickerAndroid.dismissedAction) {
+      let d = new Date()
+      d.setHours(hour)
+      d.setMinutes(minute)
       this.setState({
-        date: Moment().hour(hour).minute(minute).toDate()
+        date: d
       });
       this.datePicked();
     } else {
@@ -219,11 +221,11 @@ class DatePicker extends Component {
     const {mode, androidMode, format = FORMATS[mode], is24Hour = !format.match(/h|a/)} = this.props;
 
     if (action !== DatePickerAndroid.dismissedAction) {
-      let timeMoment = Moment(this.state.date);
+      let timeMoment = this.state.date;
 
       TimePickerAndroid.open({
-        hour: timeMoment.hour(),
-        minute: timeMoment.minutes(),
+        hour: timeMoment.getHours(),
+        minute: timeMoment.getMinutes(),
         is24Hour: is24Hour,
         mode: androidMode
       }).then(this.onDatetimeTimePicked.bind(this, year, month, day));
@@ -272,11 +274,11 @@ class DatePicker extends Component {
       } else if (mode === 'time') {
         // 选时间
 
-        let timeMoment = Moment(this.state.date);
+        let timeMoment = this.state.date;
 
         TimePickerAndroid.open({
-          hour: timeMoment.hour(),
-          minute: timeMoment.minutes(),
+          hour: timeMoment.getHours(),
+          minute: timeMoment.getMinutes(),
           is24Hour: is24Hour
         }).then(this.onTimePicked);
       } else if (mode === 'datetime') {
@@ -475,3 +477,4 @@ DatePicker.propTypes = {
 };
 
 export default DatePicker;
+
